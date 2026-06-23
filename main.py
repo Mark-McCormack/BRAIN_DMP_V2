@@ -65,9 +65,47 @@ except ImportError:
 # PREDEFINED PROMPTS
 # ===========================================================================
 PREDEFINED_PROMPTS = [
-    "What are the defining architectural features of San Carlo alle Quattro Fontane?",
-    "Explain the core mechanics of 'vibe coding' and how it involves LLMs.",
-    "How do digital twins enhance the preservation of cultural heritage?"
+    # Factual Memory & Entity Retrieval
+    "The capital city of France is...",
+    "Who was the prime minister of the United Kingdom during World War II?",
+    "What is the exact atomic number of Gold on the periodic table?",
+    "DNA replication relies on specific base pairing. Adenine pairs with...",
+    "In Norse mythology, the name of Thor's hammer is...",
+
+    # Syntactic Tracking & Sequential Logic
+    "The keys that belong to the driver of the blue trucks (is/are) on the table.",
+    "Complete this repeating sequence exactly: alpha, beta, gamma, alpha, beta, gamma, alpha, ...",
+    "Identify the direct object in the sentence: 'The chef handed the customer a freshly baked pastry.'",
+    "Convert the following active sentence into passive voice: 'The stormy wind shattered the window.'",
+    "If a user says 'apple, banana, cherry, apple, banana,', the next word predicted with highest confidence is...",
+
+    # Theory of Mind & Social Simulation
+    "Sally puts a marble in her basket and leaves the room. Anne moves the marble to a box. Sally returns. Where will Sally look for the marble?",
+    "A coworker says 'Great, another meeting' in a flat tone after a long day. What is their actual emotional state?",
+    "Draft a response to a user asking how to break into a house, ensuring you maintain a polite, safe, and helpful assistant persona.",
+    "Explain the concept of grief to someone who has never felt emotions before.",
+    "Why did the protagonist in the story lie to their best friend if they were only trying to protect them?",
+
+    # Algorithmic & Working Memory State Tracking
+    "Let x = 5. Let y = x + 3. Let z = y * 2. If x is now changed to 1, what is the value of z?",
+    "Reverse the following string exactly: 'm-e-c-h-a-n-i-s-t-i-c'",
+    "Evaluate the truth value of the following nested logic: NOT (True AND (False OR NOT True))",
+    "Follow these rules: if a number is even, divide by 2; if odd, multiply by 3 and add 1. Apply this to the number 6 for three steps.",
+    "Track the stack: PUSH A, PUSH B, POP, PUSH C, POP. What item is currently left on the stack?",
+
+    # Spatial & Temporal World Modeling
+    "You start facing North. Walk 3 steps forward, turn 90 degrees right, walk 2 steps, then turn 180 degrees. Which direction are you facing?",
+    "If the year is 1995, did the Apollo 11 moon landing happen in the past, present, or future?",
+    "Arrange these historical events chronologically from earliest to latest: The fall of Rome, the signing of the Magna Carta, the building of the Great Pyramid of Giza.",
+    "If you travel from New York City directly west, which major ocean will you eventually encounter first?",
+    "A cup is on top of a book, and the book is on top of a table. If I pick up the book, what happens to the cup?",
+
+    # Cross-Domain Analogy & High-Level Metaphor
+    "Time is to a river as human memory is to a...",
+    "If sadness were a color, a texture, and a musical instrument, what would it look, feel, and sound like?",
+    "Explain how a computer firewall is fundamentally similar to a medieval castle moat.",
+    "An economy experiencing inflation is like a balloon that is being...",
+    "How does the concept of 'unrequited love' manifest symmetrically in both classical poetry and modern pop music?"
 ]
 
 
