@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ACTIVATION SCOPE — 3D Neuron Activation Explorer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0d0d;
+    --panel:#0f1413;
+    --line:#1f2b29;
+    --phosphor:#5cf2c4;
+    --phosphor-dim:#2c6b58;
+    --amber:#ffb454;
+    --text:#dce8e4;
+    --text-dim:#7a9089;
+    --mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;}
+  #app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:48px 1fr;height:100vh;}
+
+  /* header */
+  #hdr{grid-column:1/3;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0d1110,#0a0d0d);}
+  #hdr .dot{width:8px;height:8px;border-radius:50%;background:var(--phosphor-dim);box-shadow:0 0 6px var(--phosphor-dim);}
+  #hdr .dot.live{background:var(--phosphor);box-shadow:0 0 8px var(--phosphor);}
+  #hdr h1{font-size:13px;letter-spacing:.12em;font-weight:600;margin:0;color:var(--text);}
+  #hdr .sub{font-size:11px;color:var(--text-dim);letter-spacing:.05em;}
+  #hdr .spacer{flex:1;}
+  #hdr .readout{font-size:11px;color:var(--phosphor-dim);}
+
+  /* sidebar */
+  #side{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:14px 14px 80px;}
+  .blk{margin-bottom:18px;}
+  .blk h2{font-size:10px;letter-spacing:.15em;color:var(--text-dim);margin:0 0 8px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:6px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:11px;}
+  .row label{color:var(--text-dim);}
+  .row .val{color:var(--phosphor);font-size:11px;}
+
+  #drop{border:1px dashed var(--line);border-radius:3px;padding:18px 10px;text-align:center;font-size:11px;color:var(--text-dim);cursor:pointer;transition:border-color .15s,color .15s;}
+  #drop:hover,#drop.drag{border-color:var(--phosphor-dim);color:var(--phosphor);}
+  #drop input{display:none;}
+  #fileMeta{font-size:11px;color:var(--text-dim);line-height:1.5;margin-top:8px;}
+  #fileMeta .k{color:var(--text-dim);}
+  #fileMeta .v{color:var(--phosphor);}
+
+  select, input[type="number"]{
+    background:#0a0e0d;border:1px solid var(--line);color:var(--text);font-family:var(--mono);
+    font-size:11px;padding:3px 5px;border-radius:2px;width:108px;
+  }
+  select:focus,input:focus{outline:1px solid var(--phosphor-dim);}
+
+  input[type="range"]{width:100%;accent-color:var(--phosphor);height:3px;}
+
+  .dimRow{border:1px solid var(--line);border-radius:3px;padding:7px 8px;margin-bottom:6px;}
+  .dimRow .dimHead{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:5px;}
+  .dimRow .dimHead b{color:var(--text);font-weight:600;}
+  .dimRow select{width:100%;margin-bottom:5px;}
+  .dimRow .sliceRow{display:none;align-items:center;gap:6px;}
+  .dimRow .sliceRow.show{display:flex;}
+  .dimRow .sliceRow input{flex:1;width:auto;}
+  .dimRow .sliceRow span{font-size:10px;color:var(--phosphor);width:30px;text-align:right;}
+
+  button{
+    background:#101a17;border:1px solid var(--phosphor-dim);color:var(--phosphor);
+    font-family:var(--mono);font-size:11px;letter-spacing:.05em;padding:7px 10px;border-radius:2px;
+    cursor:pointer;width:100%;transition:background .15s;
+  }
+  button:hover{background:#142420;}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+
+  #legend{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-dim);margin-top:6px;}
+  #legendBar{flex:1;height:8px;border-radius:2px;background:linear-gradient(90deg,#1b1f3a,#2c5f8a,#3aa6a0,#5cf2c4,#ffe27a,#ff8a3d,#ff3d3d);}
+
+  /* main viewport */
+  #main{position:relative;background:#070908;}
+  #scene{width:100%;height:100%;display:block;}
+  #empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;gap:10px;text-align:center;}
+  #empty b{color:var(--phosphor-dim);font-size:13px;letter-spacing:.05em;}
+
+  #hud{position:absolute;top:10px;left:10px;font-size:10px;color:var(--text-dim);line-height:1.6;pointer-events:none;background:rgba(10,13,13,.55);padding:6px 9px;border:1px solid var(--line);border-radius:3px;}
+  #hud .v{color:var(--phosphor);}
+
+  #hotlist{position:absolute;top:10px;right:10px;width:220px;max-height:46%;overflow-y:auto;font-size:10px;background:rgba(10,13,13,.7);border:1px solid var(--line);border-radius:3px;padding:8px;}
+  #hotlist h3{margin:0 0 6px;font-size:10px;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase;}
+  .hotrow{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #15201d;color:var(--text-dim);}
+  .hotrow b{color:var(--amber);font-weight:600;}
+  .hotrow span.idx{color:var(--text-dim);}
+  .hotrow span.val{color:var(--phosphor);}
+
+  #scanbar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--phosphor);opacity:0;box-shadow:0 0 10px var(--phosphor);}
+  #footer{position:absolute;bottom:8px;left:10px;font-size:10px;color:var(--text-dim);}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="hdr">
+    <div class="dot" id="liveDot"></div>
+    <h1>ACTIVATION SCOPE</h1>
+    <div class="sub">// 3D neuron activation explorer</div>
+    <div class="spacer"></div>
+    <div class="readout" id="hdrReadout"></div>
+  </div>
+
+  <div id="side">
+
+    <div class="blk">
+      <h2>01 · Load</h2>
+      <div id="drop">
+        DROP .NPY FILE<br>or click to browse
+        <input type="file" id="fileInput" accept=".npy">
+      </div>
+      <div id="fileMeta"></div>
+    </div>
+
+    <div class="blk" id="dimsBlk" style="display:none;">
+      <h2>02 · Axis mapping & Limits</h2>
+      <div id="dimsContainer"></div>
+    </div>
+
+    <div class="blk" id="appearBlk" style="display:none;">
+      <h2>03 · Appearance</h2>
+      <div class="row"><label>Colormap value</label>
+        <select id="colorBy">
+          <option value="signed">signed (+/-)</option>
+          <option value="abs">magnitude (|x|)</option>
+        </select>
+      </div>
+      <div class="row"><label>Point size</label><span class="val" id="ptSizeVal">2.2</span></div>
+      <input type="range" id="ptSize" min="0.5" max="8" step="0.1" value="2.2">
+      <div class="row" style="margin-top:8px;"><label>Activity threshold (pct)</label><span class="val" id="threshVal">0</span></div>
+      <input type="range" id="thresh" min="0" max="99" step="1" value="0">
+      <div id="legend"><span>low</span><div id="legendBar"></div><span>high</span></div>
+    </div>
+
+    <div class="blk" id="renderBlk" style="display:none;">
+      <h2>04 · Render</h2>
+      <button id="renderBtn">RENDER VOLUME</button>
+      <div id="renderInfo" style="font-size:10px;color:var(--text-dim);margin-top:7px;line-height:1.5;"></div>
+    </div>
+
+  </div>
+
+  <div id="main">
+    <div id="empty">
+      <b>NO SIGNAL</b>
+      <div>Load a .npy activation tensor to begin.<br>Drag-rotate · scroll-zoom once rendered.</div>
+    </div>
+    <canvas id="scene" style="display:none;"></canvas>
+    <div id="hud" style="display:none;"></div>
+    <div id="hotlist" style="display:none;"><h3>Hottest voxels</h3><div id="hotrows"></div></div>
+    <div id="scanbar"></div>
+    <div id="footer" style="display:none;">drag: orbit &nbsp;·&nbsp; scroll: zoom &nbsp;·&nbsp; right-drag: pan</div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- .npy PARSER ----------
+  function parseNpy(buf){
+    const dv = new DataView(buf);
+    const magic = String.fromCharCode(dv.getUint8(0),dv.getUint8(1),dv.getUint8(2),dv.getUint8(3),dv.getUint8(4),dv.getUint8(5));
+    if (magic !== "\x93NUMPY") throw new Error("Not a valid .npy file (bad magic bytes).");
+    const major = dv.getUint8(6);
+    let headerLen, headerStart;
+    if (major === 1){
+      headerLen = dv.getUint16(8, true);
+      headerStart = 10;
+    } else {
+      headerLen = dv.getUint32(8, true);
+      headerStart = 12;
+    }
+    const headerBytes = new Uint8Array(buf, headerStart, headerLen);
+    const headerStr = new TextDecoder("ascii").decode(headerBytes);
+
+    const descrMatch = headerStr.match(/'descr':\s*'([^']+)'/);
+    const orderMatch  = headerStr.match(/'fortran_order':\s*(True|False)/);
+    const shapeMatch  = headerStr.match(/'shape':\s*\(([^)]*)\)/);
+    if (!descrMatch || !shapeMatch) throw new Error("Could not parse .npy header.");
+
+    const descr = descrMatch[1];
+    const fortranOrder = orderMatch ? orderMatch[1] === "True" : false;
+    const shape = shapeMatch[1].split(",").map(s=>s.trim()).filter(s=>s.length).map(Number);
+    if (shape.length === 0) shape.push(1); // scalar
+
+    const dataStart = headerStart + headerLen;
+    const n = shape.reduce((a,b)=>a*b,1);
+
+    const little = descr[0] !== '>';
+    const typeChar = descr[1];
+    const bytesPerEl = parseInt(descr.slice(2),10) || 1;
+
+    const out = new Float32Array(n);
+    let getter;
+    switch(typeChar+bytesPerEl){
+      case 'f4': getter = (o)=>dv.getFloat32(o, little); break;
+      case 'f8': getter = (o)=>dv.getFloat64(o, little); break;
+      case 'f2': getter = (o)=>halfToFloat(dv.getUint16(o, little)); break;
+      case 'i1': getter = (o)=>dv.getInt8(o); break;
+      case 'u1': getter = (o)=>dv.getUint8(o); break;
+      case 'b1': getter = (o)=>dv.getUint8(o); break;
+      case 'i2': getter = (o)=>dv.getInt16(o, little); break;
+      case 'u2': getter = (o)=>dv.getUint16(o, little); break;
+      case 'i4': getter = (o)=>dv.getInt32(o, little); break;
+      case 'u4': getter = (o)=>dv.getUint32(o, little); break;
+      case 'i8': getter = (o)=>Number(dv.getBigInt64(o, little)); break;
+      case 'u8': getter = (o)=>Number(dv.getBigUint64(o, little)); break;
+      default: throw new Error("Unsupported dtype: " + descr + " (supports float16/32/64, int8/16/32/64, uint8/16/32/64).");
+    }
+
+    for (let i=0;i<n;i++){
+      out[i] = getter(dataStart + i*bytesPerEl);
+    }
+    return { data: out, shape, descr, fortranOrder };
+  }
+
+  function halfToFloat(h){
+    const s = (h & 0x8000) >> 15, e = (h & 0x7C00) >> 10, f = h & 0x03FF;
+    if (e === 0) return (s?-1:1) * Math.pow(2,-14) * (f/1024);
+    if (e === 0x1F) return f ? NaN : ((s?-1:1)*Infinity);
+    return (s?-1:1) * Math.pow(2, e-15) * (1 + f/1024);
+  }
+
+  // ---------- STATE ----------
+  let raw = null;       
+  let strides = null;   
+  let dimRoles = [];    
+  let dimSliceIdx = [];
+  let dimCropMin = [];   // NEW: Minimum range limit per dimension
+  let dimCropMax = [];   // NEW: Maximum range limit per dimension
+  
+  let scene, camera, renderer, pointCloud, raycaster;
+  let camTarget = new THREE.Vector3(0,0,0);
+  let camDist = 180, camTheta = 0.9, camPhi = 1.0;
+
+  const $ = id => document.getElementById(id);
+
+  function computeStrides(shape, fortranOrder){
+    const d = shape.length;
+    const s = new Array(d);
+    if (!fortranOrder){
+      s[d-1] = 1;
+      for (let i=d-2;i>=0;i--) s[i] = s[i+1]*shape[i+1];
+    } else {
+      s[0] = 1;
+      for (let i=1;i<d;i++) s[i] = s[i-1]*shape[i-1];
+    }
+    return s;
+  }
+
+  // ---------- FILE HANDLING ----------
+  const drop = $("drop"), fileInput = $("fileInput");
+  drop.addEventListener("click", ()=>fileInput.click());
+  ["dragover","dragleave","drop"].forEach(ev=>{
+    drop.addEventListener(ev, e=>{
+      e.preventDefault();
+      drop.classList.toggle("drag", ev==="dragover");
+      if (ev==="drop" && e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+    });
+  });
+  fileInput.addEventListener("change", e=>{ if(e.target.files.length) loadFile(e.target.files[0]); });
+
+  function loadFile(file){
+    if (!file.name.endsWith(".npy")){
+      alert("Please provide a .npy file (export with numpy.save()).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try{
+        raw = parseNpy(e.target.result);
+        strides = computeStrides(raw.shape, raw.fortranOrder);
+        $("liveDot").classList.add("live");
+        renderFileMeta(file);
+        buildDimUI();
+        $("dimsBlk").style.display = "block";
+        $("appearBlk").style.display = "block";
+        $("renderBlk").style.display = "block";
+      } catch(err){
+        alert("Failed to parse file: " + err.message);
+        raw = null;
+        $("liveDot").classList.remove("live");
+      }
+    };
+    reader.onerror = () => alert("Could not read file from disk.");
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderFileMeta(file){
+    let mn=Infinity, mx=-Infinity, sum=0;
+    const d = raw.data, n = d.length;
+    for (let i=0;i<n;i++){ const v=d[i]; if(v<mn)mn=v; if(v>mx)mx=v; sum+=v; }
+    $("fileMeta").innerHTML =
+      `<div><span class="k">file</span> <span class="v">${file.name}</span></div>` +
+      `<div><span class="k">shape</span> <span class="v">(${raw.shape.join(', ')})</span></div>` +
+      `<div><span class="k">dtype</span> <span class="v">${raw.descr}</span></div>` +
+      `<div><span class="k">elements</span> <span class="v">${n.toLocaleString()}</span></div>` +
+      `<div><span class="k">min / max</span> <span class="v">${mn.toFixed(4)} / ${mx.toFixed(4)}</span></div>` +
+      `<div><span class="k">mean</span> <span class="v">${(sum/n).toFixed(4)}</span></div>`;
+    $("hdrReadout").textContent = `${raw.shape.join('×')} ${raw.descr}`;
+  }
+
+  // ---------- DIM ROLE & RANGE UI ----------
+  function buildDimUI(){
+    const shape = raw.shape;
+    dimRoles = shape.map((_,i)=> i===0?'X' : i===1?'Y' : i===2?'Z' : 'reduce-max');
+    dimSliceIdx = shape.map(()=>0);
+    dimCropMin = shape.map(()=>0);
+    dimCropMax = shape.map((size)=>size-1);
+
+    const c = $("dimsContainer");
+    c.innerHTML = "";
+    shape.forEach((size, dimIdx)=>{
+      const wrap = document.createElement("div");
+      wrap.className = "dimRow";
+      wrap.innerHTML = `
+        <div class="dimHead"><span>dim ${dimIdx}</span><b>size ${size}</b></div>
+        <select data-dim="${dimIdx}" class="roleSel">
+          <option value="X">→ X axis</option>
+          <option value="Y">→ Y axis</option>
+          <option value="Z">→ Z axis</option>
+          <option value="reduce-max">collapse: max</option>
+          <option value="reduce-absmax">collapse: max(|x|)</option>
+          <option value="reduce-mean">collapse: mean</option>
+          <option value="slice">fix to single index</option>
+        </select>
+        <div class="sliceRow">
+          <input type="range" min="0" max="${size-1}" value="0" data-dim="${dimIdx}" class="sliceRange">
+          <span class="sliceVal">0</span>
+        </div>
+        <div class="cropRow" style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:10px;">
+          <span style="color:var(--text-dim);">Limit Range</span>
+          <div style="display:flex; gap:4px; align-items:center;">
+              <input type="number" class="cropMin" value="0" min="0" max="${size-1}" style="width:42px;">
+              <span style="color:var(--text-dim);">to</span>
+              <input type="number" class="cropMax" value="${size-1}" min="0" max="${size-1}" style="width:42px;">
+          </div>
+        </div>`;
+      c.appendChild(wrap);
+      
+      // Wire up Role Changes
+      wrap.querySelector(".roleSel").value = dimRoles[dimIdx];
+      wrap.querySelector(".roleSel").addEventListener("change", e=>{
+        dimRoles[dimIdx] = e.target.value;
+        wrap.querySelector(".sliceRow").classList.toggle("show", e.target.value === "slice");
+        triggerLiveRender();
+      });
+      
+      // Wire up Live "Scrolling" (Slice Sliders)
+      const sr = wrap.querySelector(".sliceRange");
+      sr.addEventListener("input", e=>{
+        dimSliceIdx[dimIdx] = parseInt(e.target.value,10);
+        wrap.querySelector(".sliceVal").textContent = e.target.value;
+        triggerLiveRender();
+      });
+
+      // Wire up Limit Range Inputs
+      const cMin = wrap.querySelector(".cropMin");
+      const cMax = wrap.querySelector(".cropMax");
+      
+      cMin.addEventListener("change", e=>{
+        let val = parseInt(e.target.value, 10);
+        if(val > dimCropMax[dimIdx]) { val = dimCropMax[dimIdx]; e.target.value = val; }
+        dimCropMin[dimIdx] = val;
+        triggerLiveRender();
+      });
+      
+      cMax.addEventListener("change", e=>{
+        let val = parseInt(e.target.value, 10);
+        if(val < dimCropMin[dimIdx]) { val = dimCropMin[dimIdx]; e.target.value = val; }
+        dimCropMax[dimIdx] = val;
+        triggerLiveRender();
+      });
+    });
+  }
+
+  // Core trigger for fast updates without full scene reset
+  function triggerLiveRender() {
+      if (!raw || !pointCloud) return; 
+      try {
+        const vol = buildVolume();
+        renderVolume(vol, parseInt($("thresh").value,10), $("colorBy").value, parseFloat($("ptSize").value));
+      } catch(err) {
+         // Silently catch layout errors (like inverted mins/maxs) during fast scrubbing
+      }
+  }
+
+  // ---------- REDUCTION INTO 3D VOLUME ----------
+  function buildVolume(){
+    const shape = raw.shape, d = raw.data;
+    const dims = shape.length;
+
+    const xDim = dimRoles.indexOf('X');
+    const yDim = dimRoles.indexOf('Y');
+    const zDim = dimRoles.indexOf('Z');
+    if (xDim<0 || yDim<0 || zDim<0) throw new Error("Assign exactly one dimension each to X, Y and Z.");
+
+    // Calculate dynamic bounding box based on user Limits
+    const nx = dimCropMax[xDim] - dimCropMin[xDim] + 1;
+    const ny = dimCropMax[yDim] - dimCropMin[yDim] + 1;
+    const nz = dimCropMax[zDim] - dimCropMin[zDim] + 1;
+
+    if (nx <= 0 || ny <= 0 || nz <= 0) throw new Error("Invalid dimension range selected.");
+
+    const volN = nx*ny*nz;
+    if (volN > 8_000_000) throw new Error(`Resulting volume (${volN.toLocaleString()} voxels) is too large. Collapse dimensions or reduce limits.`);
+
+    const sum = new Float64Array(volN);
+    const cnt = new Int32Array(volN);
+    const best = new Float32Array(volN).fill(-Infinity);   
+    const bestAbs = new Float32Array(volN).fill(-Infinity); 
+
+    const idxBuf = new Array(dims);
+    const N = d.length;
+
+    for (let flat=0; flat<N; flat++){
+      let rem = flat, ok = true;
+      for (let dd=0; dd<dims; dd++){
+        const id = Math.floor(rem / strides[dd]) % shape[dd];
+        idxBuf[dd] = id;
+        
+        // Filter by user limits (cropping)
+        if (id < dimCropMin[dd] || id > dimCropMax[dd]) { ok = false; break; }
+        
+        // Filter by single slice index if active
+        if (dimRoles[dd] === 'slice' && id !== dimSliceIdx[dd]) { ok = false; break; }
+      }
+      if (!ok) continue;
+
+      // Shift physical coordinates by the cropped offset
+      const ox = idxBuf[xDim] - dimCropMin[xDim];
+      const oy = idxBuf[yDim] - dimCropMin[yDim];
+      const oz = idxBuf[zDim] - dimCropMin[zDim];
+      
+      const outIdx = ox + nx*(oy + ny*oz);
+      const v = d[flat];
+
+      sum[outIdx] += v;
+      cnt[outIdx] += 1;
+      if (v > best[outIdx]) best[outIdx] = v;
+      const av = Math.abs(v);
+      if (av > bestAbs[outIdx]){ bestAbs[outIdx] = av; }
+    }
+
+    const roleSet = new Set(dimRoles.filter(r=>r.startsWith('reduce')));
+    let mode = 'max';
+    if (roleSet.has('reduce-absmax')) mode = 'absmax';
+    else if (roleSet.has('reduce-mean') && !roleSet.has('reduce-max')) mode = 'mean';
+
+    const out = new Float32Array(volN);
+    for (let i=0;i<volN;i++){
+      if (cnt[i]===0){ out[i]=0; continue; }
+      if (mode==='mean') out[i] = sum[i]/cnt[i];
+      else if (mode==='absmax'){
+        out[i] = (best[i] === -Infinity) ? 0 : best[i];
+      } else out[i] = (best[i] === -Infinity) ? 0 : best[i];
+    }
+    return { nx, ny, nz, values: out, mode };
+  }
+
+  // ---------- COLORMAP (turbo-ish) ----------
+  const STOPS = [
+    [0.05,0.05,0.20],[0.10,0.25,0.45],[0.10,0.55,0.55],
+    [0.36,0.95,0.77],[1.00,0.89,0.48],[1.00,0.54,0.24],[1.00,0.24,0.24]
+  ];
+  function colormap(t){
+    t = Math.min(1, Math.max(0, t));
+    const n = STOPS.length-1;
+    const seg = Math.min(n-1, Math.floor(t*n));
+    const localT = t*n - seg;
+    const a = STOPS[seg], b = STOPS[seg+1];
+    return [
+      a[0]+(b[0]-a[0])*localT,
+      a[1]+(b[1]-a[1])*localT,
+      a[2]+(b[2]-a[2])*localT
+    ];
+  }
+
+  // ---------- THREE.JS SCENE ----------
+  function initScene(){
+    if (renderer) return;
+    const canvas = $("scene");
+    renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070908);
+    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
+
+    const grid = new THREE.GridHelper(200, 20, 0x1f2b29, 0x141b19);
+    scene.add(grid);
+
+    resize();
+    window.addEventListener("resize", resize);
+    attachOrbitControls(canvas);
+    animate();
+  }
+
+  function resize(){
+    const main = $("main");
+    const w = main.clientWidth, h = main.clientHeight;
+    renderer.setSize(w,h,false);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+  }
+
+  function attachOrbitControls(canvas){
+    let dragging=false, panning=false, lx=0, ly=0;
+    canvas.addEventListener("mousedown", e=>{
+      dragging = e.button===0; panning = e.button===2;
+      lx=e.clientX; ly=e.clientY;
+    });
+    window.addEventListener("mouseup", ()=>{dragging=false;panning=false;});
+    canvas.addEventListener("contextmenu", e=>e.preventDefault());
+    window.addEventListener("mousemove", e=>{
+      const dx=e.clientX-lx, dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+      if (dragging){
+        camTheta -= dx*0.005;
+        camPhi   = Math.min(3.05, Math.max(0.05, camPhi - dy*0.005));
+        updateCamera();
+      } else if (panning){
+        const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);
+        const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix,1);
+        camTarget.addScaledVector(right, -dx*0.2);
+        camTarget.addScaledVector(up, dy*0.2);
+        updateCamera();
+      }
+    });
+    canvas.addEventListener("wheel", e=>{
+      e.preventDefault();
+      camDist *= (1 + e.deltaY*0.001);
+      camDist = Math.min(2000, Math.max(5, camDist));
+      updateCamera();
+    }, {passive:false});
+  }
+
+  function updateCamera(){
+    const x = camTarget.x + camDist*Math.sin(camPhi)*Math.sin(camTheta);
+    const y = camTarget.y + camDist*Math.cos(camPhi);
+    const z = camTarget.z + camDist*Math.sin(camPhi)*Math.cos(camTheta);
+    camera.position.set(x,y,z);
+    camera.lookAt(camTarget);
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if (pointCloud) pointCloud.rotation.y += 0.0008;
+    renderer.render(scene, camera);
+  }
+
+  function clearVolumeMesh(){
+    if (pointCloud){ scene.remove(pointCloud); pointCloud.geometry.dispose(); pointCloud.material.dispose(); pointCloud=null; }
+  }
+
+  function renderVolume(vol, threshPct, colorMode, ptSize){
+    clearVolumeMesh();
+    const {nx,ny,nz,values} = vol;
+    const n = values.length;
+
+    let mn=Infinity, mx=-Infinity;
+    for (let i=0;i<n;i++){ const v=colorMode==='abs'?Math.abs(values[i]):values[i]; if(v<mn)mn=v; if(v>mx)mx=v; }
+
+    const sorted = Float32Array.from(values, v=>colorMode==='abs'?Math.abs(v):v).slice();
+    sorted.sort();
+    const cutIdx = Math.floor((threshPct/100)*(n-1));
+    const cutVal = sorted[Math.max(0,cutIdx)];
+
+    const positions=[], colors=[], sizes=[];
+    const hot = [];
+    const span = Math.max(nx,ny,nz);
+    const scale = 140/span;
+    const cx=(nx-1)/2, cy=(ny-1)/2, cz=(nz-1)/2;
+
+    for (let iz=0; iz<nz; iz++){
+      for (let iy=0; iy<ny; iy++){
+        for (let ix=0; ix<nx; ix++){
+          const idx = ix + nx*(iy + ny*iz);
+          const raw = values[idx];
+          const cmpVal = colorMode==='abs'?Math.abs(raw):raw;
+          if (cmpVal < cutVal) continue;
+          const t = (mx-mn)>1e-9 ? (cmpVal-mn)/(mx-mn) : 0.5;
+          const [r,g,b] = colormap(t);
+          positions.push((ix-cx)*scale, (iy-cy)*scale, (iz-cz)*scale);
+          colors.push(r,g,b);
+          sizes.push(0.6 + t*1.6);
+          hot.push({ix,iy,iz,val:raw,t});
+        }
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+    const mat = new THREE.PointsMaterial({
+      size: ptSize, vertexColors:true, transparent:true, opacity:0.92,
+      sizeAttenuation:true, depthWrite:false, blending: THREE.AdditiveBlending
+    });
+    pointCloud = new THREE.Points(geo, mat);
+    scene.add(pointCloud);
+
+    camDist = span*scale*1.9 + 40;
+    updateCamera();
+
+    hot.sort((a,b)=> Math.abs(b.val)-Math.abs(a.val));
+    renderHotlist(hot.slice(0,12), vol);
+
+    $("renderInfo").textContent =
+      `${positions.length/3 > 0 ? (positions.length/3).toLocaleString() : 0} / ${n.toLocaleString()} voxels shown · reduce mode: ${vol.mode}`;
+    $("hud").innerHTML =
+      `grid <span class="v">${nx}×${ny}×${nz}</span> &nbsp;|&nbsp; range <span class="v">${mn.toFixed(3)} … ${mx.toFixed(3)}</span>`;
+
+    flashScan();
+  }
+
+  function renderHotlist(hot, vol){
+    const xDim = dimRoles.indexOf('X'), yDim = dimRoles.indexOf('Y'), zDim = dimRoles.indexOf('Z');
+    
+    // Reverse the crop offset so hotlist reflects absolute tensor coordinates
+    $("hotrows").innerHTML = hot.map((h,i)=>
+      `<div class="hotrow">
+        <b>#${i+1}</b>
+        <span class="idx">[d${xDim}=${h.ix + dimCropMin[xDim]}, d${yDim}=${h.iy + dimCropMin[yDim]}, d${zDim}=${h.iz + dimCropMin[zDim]}]</span>
+        <span class="val">${h.val.toFixed(4)}</span>
+      </div>`
+    ).join("");
+  }
+
+  function flashScan(){
+    const sb = $("scanbar");
+    sb.style.opacity = 1;
+    sb.style.transition = "none";
+    sb.style.bottom = "0px";
+    requestAnimationFrame(()=>{
+      sb.style.transition = "bottom 0.9s ease-out, opacity 0.9s ease-out";
+      sb.style.bottom = "100%";
+      sb.style.opacity = 0;
+    });
+  }
+
+  // ---------- WIRE UP CONTROLS ----------
+  $("ptSize").addEventListener("input", e=>{ 
+      $("ptSizeVal").textContent = e.target.value; 
+      triggerLiveRender(); 
+  });
+  
+  $("thresh").addEventListener("input", e=>{ 
+      $("threshVal").textContent = e.target.value; 
+      triggerLiveRender(); 
+  });
+
+  $("colorBy").addEventListener("change", triggerLiveRender);
+
+  $("renderBtn").addEventListener("click", ()=>{
+    if (!raw){ alert("Load a .npy file first."); return; }
+    try{
+      $("empty").style.display = "none";
+      $("scene").style.display = "block";
+      $("hud").style.display = "block";
+      $("hotlist").style.display = "block";
+      $("footer").style.display = "block";
+      initScene();
+      resize();
+      const vol = buildVolume();
+      renderVolume(vol, parseInt($("thresh").value,10), $("colorBy").value, parseFloat($("ptSize").value));
+    } catch(err){
+      alert(err.message);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
