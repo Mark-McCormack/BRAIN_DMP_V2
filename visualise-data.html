@@ -5,94 +5,135 @@
 <title>ACTIVATION SCOPE — 3D Neuron Activation Explorer</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  :root{
-    --bg:#0a0d0d;
-    --panel:#0f1413;
-    --line:#1f2b29;
-    --phosphor:#5cf2c4;
-    --phosphor-dim:#2c6b58;
-    --amber:#ffb454;
-    --text:#dce8e4;
-    --text-dim:#7a9089;
+  :root {
+    /* Light Mode Palette */
+    --bg: #f4f7f6;
+    --panel: #ffffff;
+    --panel-alt: #f9fbfb;
+    --line: #d1dbd8;
+    --phosphor: #02855e;
+    --phosphor-dim: #84b8a6;
+    --amber: #d97400;
+    --text: #1a2421;
+    --text-dim: #5c706a;
+    --overlay-bg: rgba(255,255,255,.85);
+    --overlay-bg-soft: rgba(255,255,255,.8);
+    --scene-bg: #f4f7f6;
+    --grid-major: #d1dbd8;
+    --grid-minor: #e2e8e6;
     --mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-theme="dark"] {
+    /* Dark Mode Palette */
+    --bg: #0d1412;
+    --panel: #131c19;
+    --panel-alt: #182420;
+    --line: #2a3a35;
+    --phosphor: #2ee6a8;
+    --phosphor-dim: #3d6e5d;
+    --amber: #ffa726;
+    --text: #e6efec;
+    --text-dim: #8aa39b;
+    --overlay-bg: rgba(19,28,25,.88);
+    --overlay-bg-soft: rgba(19,28,25,.82);
+    --scene-bg: #0d1412;
+    --grid-major: #2a3a35;
+    --grid-minor: #1b2723;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;}
-  #app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:48px 1fr;height:100vh;}
+  body{transition:background-color .2s, color .2s;}
+  #app, #hdr, #side, .dimRow, select, input[type="number"]{transition:background-color .2s, border-color .2s, color .2s;}
+  
+  /* Increased sidebar width for larger fonts */
+  #app{display:grid;grid-template-columns:360px 1fr;grid-template-rows:60px 1fr;height:100vh;}
 
   /* header */
-  #hdr{grid-column:1/3;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0d1110,#0a0d0d);}
-  #hdr .dot{width:8px;height:8px;border-radius:50%;background:var(--phosphor-dim);box-shadow:0 0 6px var(--phosphor-dim);}
+  #hdr{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel);}
+  #hdr .dot{width:10px;height:10px;border-radius:50%;background:var(--phosphor-dim);box-shadow:0 0 6px var(--phosphor-dim);}
   #hdr .dot.live{background:var(--phosphor);box-shadow:0 0 8px var(--phosphor);}
-  #hdr h1{font-size:13px;letter-spacing:.12em;font-weight:600;margin:0;color:var(--text);}
-  #hdr .sub{font-size:11px;color:var(--text-dim);letter-spacing:.05em;}
+  #hdr h1{font-size:16px;letter-spacing:.12em;font-weight:600;margin:0;color:var(--text);}
+  #hdr .sub{font-size:14px;color:var(--text-dim);letter-spacing:.05em;}
   #hdr .spacer{flex:1;}
-  #hdr .readout{font-size:11px;color:var(--phosphor-dim);}
+  #hdr .readout{font-size:14px;color:var(--phosphor-dim);}
+
+  #themeToggle{
+    display:flex;align-items:center;gap:6px;cursor:pointer;
+    border:1px solid var(--line);border-radius:14px;padding:4px 10px;
+    font-size:12px;color:var(--text-dim);background:var(--panel-alt);
+    letter-spacing:.05em;user-select:none;
+  }
+  #themeToggle:hover{border-color:var(--phosphor-dim);color:var(--text);}
+  #themeToggle .icon{font-size:13px;}
 
   /* sidebar */
-  #side{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:14px 14px 80px;}
-  .blk{margin-bottom:18px;}
-  .blk h2{font-size:10px;letter-spacing:.15em;color:var(--text-dim);margin:0 0 8px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:6px;}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:11px;}
+  #side{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:20px 20px 80px;}
+  .blk{margin-bottom:24px;}
+  .blk h2{font-size:13px;letter-spacing:.15em;color:var(--text-dim);margin:0 0 10px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:8px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:14px;}
   .row label{color:var(--text-dim);}
-  .row .val{color:var(--phosphor);font-size:11px;}
+  .row .val{color:var(--phosphor);font-size:14px;font-weight:600;}
 
-  #drop{border:1px dashed var(--line);border-radius:3px;padding:18px 10px;text-align:center;font-size:11px;color:var(--text-dim);cursor:pointer;transition:border-color .15s,color .15s;}
-  #drop:hover,#drop.drag{border-color:var(--phosphor-dim);color:var(--phosphor);}
+  #drop{border:1px dashed var(--line);border-radius:4px;padding:24px 12px;text-align:center;font-size:14px;color:var(--text-dim);cursor:pointer;transition:border-color .15s,color .15s;background:var(--panel-alt);}
+  #drop:hover,#drop.drag{border-color:var(--phosphor-dim);color:var(--phosphor);background:var(--panel-alt);}
   #drop input{display:none;}
-  #fileMeta{font-size:11px;color:var(--text-dim);line-height:1.5;margin-top:8px;}
+  #fileMeta{font-size:13px;color:var(--text-dim);line-height:1.6;margin-top:10px;}
   #fileMeta .k{color:var(--text-dim);}
-  #fileMeta .v{color:var(--phosphor);}
+  #fileMeta .v{color:var(--phosphor);font-weight:600;}
 
   select, input[type="number"]{
-    background:#0a0e0d;border:1px solid var(--line);color:var(--text);font-family:var(--mono);
-    font-size:11px;padding:3px 5px;border-radius:2px;width:108px;
+    background:var(--bg);border:1px solid var(--line);color:var(--text);font-family:var(--mono);
+    font-size:14px;padding:5px 8px;border-radius:4px;width:130px;
   }
-  select:focus,input:focus{outline:1px solid var(--phosphor-dim);}
+  select:focus,input:focus{outline:2px solid var(--phosphor-dim);border-color:transparent;}
 
-  input[type="range"]{width:100%;accent-color:var(--phosphor);height:3px;}
+  input[type="range"]{width:100%;accent-color:var(--phosphor);height:4px;cursor:pointer;}
 
-  .dimRow{border:1px solid var(--line);border-radius:3px;padding:7px 8px;margin-bottom:6px;}
-  .dimRow .dimHead{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:5px;}
+  .dimRow{border:1px solid var(--line);background:var(--panel-alt);border-radius:4px;padding:10px 12px;margin-bottom:8px;}
+  .dimRow .dimHead{display:flex;justify-content:space-between;font-size:13px;color:var(--text-dim);margin-bottom:8px;}
   .dimRow .dimHead b{color:var(--text);font-weight:600;}
-  .dimRow select{width:100%;margin-bottom:5px;}
-  .dimRow .sliceRow{display:none;align-items:center;gap:6px;}
+  .dimRow select{width:100%;margin-bottom:8px;background:var(--panel);}
+  .dimRow .labelRow{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .dimRow .labelRow input[type="text"]{flex:1;width:auto;background:var(--panel);border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 8px;border-radius:4px;}
+  .dimRow .labelRow input[type="text"]:focus{outline:2px solid var(--phosphor-dim);border-color:transparent;}
+  .dimRow .sliceRow{display:none;align-items:center;gap:8px;}
   .dimRow .sliceRow.show{display:flex;}
   .dimRow .sliceRow input{flex:1;width:auto;}
-  .dimRow .sliceRow span{font-size:10px;color:var(--phosphor);width:30px;text-align:right;}
+  .dimRow .sliceRow span{font-size:13px;color:var(--phosphor);width:36px;text-align:right;font-weight:600;}
 
   button{
-    background:#101a17;border:1px solid var(--phosphor-dim);color:var(--phosphor);
-    font-family:var(--mono);font-size:11px;letter-spacing:.05em;padding:7px 10px;border-radius:2px;
-    cursor:pointer;width:100%;transition:background .15s;
+    background:var(--bg);border:2px solid var(--phosphor);color:var(--phosphor);
+    font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:.05em;padding:10px 14px;border-radius:4px;
+    cursor:pointer;width:100%;transition:all .15s;
   }
-  button:hover{background:#142420;}
+  button:hover{background:var(--phosphor);color:#fff;}
   button:disabled{opacity:.35;cursor:not-allowed;}
 
-  #legend{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-dim);margin-top:6px;}
-  #legendBar{flex:1;height:8px;border-radius:2px;background:linear-gradient(90deg,#1b1f3a,#2c5f8a,#3aa6a0,#5cf2c4,#ffe27a,#ff8a3d,#ff3d3d);}
+  #legend{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-top:10px;}
+  #legendBar{flex:1;height:10px;border-radius:3px;background:linear-gradient(90deg,#8b9bb4,#4a7bb0,#2c9e8d,#1c9e49,#d9851a,#d13b3b);}
 
   /* main viewport */
-  #main{position:relative;background:#070908;}
+  #main{position:relative;background:var(--bg);}
   #scene{width:100%;height:100%;display:block;}
-  #empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;gap:10px;text-align:center;}
-  #empty b{color:var(--phosphor-dim);font-size:13px;letter-spacing:.05em;}
+  #empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);font-size:15px;gap:12px;text-align:center;}
+  #empty b{color:var(--text);font-size:18px;letter-spacing:.05em;}
 
-  #hud{position:absolute;top:10px;left:10px;font-size:10px;color:var(--text-dim);line-height:1.6;pointer-events:none;background:rgba(10,13,13,.55);padding:6px 9px;border:1px solid var(--line);border-radius:3px;}
-  #hud .v{color:var(--phosphor);}
+  #hud{position:absolute;top:16px;left:16px;font-size:13px;color:var(--text-dim);line-height:1.6;pointer-events:none;background:var(--overlay-bg);padding:8px 12px;border:1px solid var(--line);border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+  #hud .v{color:var(--phosphor);font-weight:600;}
 
-  #hotlist{position:absolute;top:10px;right:10px;width:220px;max-height:46%;overflow-y:auto;font-size:10px;background:rgba(10,13,13,.7);border:1px solid var(--line);border-radius:3px;padding:8px;}
-  #hotlist h3{margin:0 0 6px;font-size:10px;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase;}
-  .hotrow{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #15201d;color:var(--text-dim);}
+  #hotlist{position:absolute;top:16px;right:16px;width:260px;max-height:46%;overflow-y:auto;font-size:13px;background:var(--overlay-bg);border:1px solid var(--line);border-radius:4px;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+  #hotlist h3{margin:0 0 10px;font-size:12px;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase;}
+  .hotrow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);color:var(--text-dim);}
   .hotrow b{color:var(--amber);font-weight:600;}
   .hotrow span.idx{color:var(--text-dim);}
-  .hotrow span.val{color:var(--phosphor);}
+  .hotrow span.val{color:var(--phosphor);font-weight:600;}
 
-  #scanbar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--phosphor);opacity:0;box-shadow:0 0 10px var(--phosphor);}
-  #footer{position:absolute;bottom:8px;left:10px;font-size:10px;color:var(--text-dim);}
+  #scanbar{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--phosphor);opacity:0;box-shadow:0 0 12px var(--phosphor);}
+  #footer{position:absolute;bottom:12px;left:16px;font-size:13px;color:var(--text-dim);background:var(--overlay-bg-soft);padding:4px 8px;border-radius:4px;}
 
-  ::-webkit-scrollbar{width:6px;}
-  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
 </style>
 </head>
 <body>
@@ -104,6 +145,9 @@
     <div class="sub">// 3D neuron activation explorer</div>
     <div class="spacer"></div>
     <div class="readout" id="hdrReadout"></div>
+    <div id="themeToggle" title="Toggle light / dark mode">
+      <span class="icon" id="themeIcon">☾</span><span id="themeLabel">DARK</span>
+    </div>
   </div>
 
   <div id="side">
@@ -132,7 +176,7 @@
       </div>
       <div class="row"><label>Point size</label><span class="val" id="ptSizeVal">2.2</span></div>
       <input type="range" id="ptSize" min="0.5" max="8" step="0.1" value="2.2">
-      <div class="row" style="margin-top:8px;"><label>Activity threshold (pct)</label><span class="val" id="threshVal">0</span></div>
+      <div class="row" style="margin-top:12px;"><label>Activity threshold (pct)</label><span class="val" id="threshVal">0</span></div>
       <input type="range" id="thresh" min="0" max="99" step="1" value="0">
       <div id="legend"><span>low</span><div id="legendBar"></div><span>high</span></div>
     </div>
@@ -140,7 +184,7 @@
     <div class="blk" id="renderBlk" style="display:none;">
       <h2>04 · Render</h2>
       <button id="renderBtn">RENDER VOLUME</button>
-      <div id="renderInfo" style="font-size:10px;color:var(--text-dim);margin-top:7px;line-height:1.5;"></div>
+      <div id="renderInfo" style="font-size:13px;color:var(--text-dim);margin-top:10px;line-height:1.5;text-align:center;"></div>
     </div>
 
   </div>
@@ -188,7 +232,7 @@
     const descr = descrMatch[1];
     const fortranOrder = orderMatch ? orderMatch[1] === "True" : false;
     const shape = shapeMatch[1].split(",").map(s=>s.trim()).filter(s=>s.length).map(Number);
-    if (shape.length === 0) shape.push(1); // scalar
+    if (shape.length === 0) shape.push(1); 
 
     const dataStart = headerStart + headerLen;
     const n = shape.reduce((a,b)=>a*b,1);
@@ -212,7 +256,7 @@
       case 'u4': getter = (o)=>dv.getUint32(o, little); break;
       case 'i8': getter = (o)=>Number(dv.getBigInt64(o, little)); break;
       case 'u8': getter = (o)=>Number(dv.getBigUint64(o, little)); break;
-      default: throw new Error("Unsupported dtype: " + descr + " (supports float16/32/64, int8/16/32/64, uint8/16/32/64).");
+      default: throw new Error("Unsupported dtype: " + descr);
     }
 
     for (let i=0;i<n;i++){
@@ -233,14 +277,59 @@
   let strides = null;   
   let dimRoles = [];    
   let dimSliceIdx = [];
-  let dimCropMin = [];   // NEW: Minimum range limit per dimension
-  let dimCropMax = [];   // NEW: Maximum range limit per dimension
+  let dimCropMin = [];   
+  let dimCropMax = [];   
+  let dimLabels = [];
   
-  let scene, camera, renderer, pointCloud, raycaster;
+  let scene, camera, renderer, pointCloud, raycaster, gridHelper;
   let camTarget = new THREE.Vector3(0,0,0);
   let camDist = 180, camTheta = 0.9, camPhi = 1.0;
 
   const $ = id => document.getElementById(id);
+
+  // ---------- THEME (light / dark) ----------
+  function applyTheme(mode){
+    if (mode === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+      $("themeIcon").textContent = '☀';
+      $("themeLabel").textContent = 'LIGHT';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      $("themeIcon").textContent = '☾';
+      $("themeLabel").textContent = 'DARK';
+    }
+    try{ localStorage.setItem('activationScopeTheme', mode); }catch(e){}
+    // Live-update the three.js scene background / grid if already initialized
+    if (scene){
+      const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--scene-bg').trim();
+      scene.background = new THREE.Color(cssBg);
+    }
+    if (gridHelper){
+      const major = getComputedStyle(document.documentElement).getPropertyValue('--grid-major').trim();
+      const minor = getComputedStyle(document.documentElement).getPropertyValue('--grid-minor').trim();
+      scene.remove(gridHelper);
+      gridHelper.geometry.dispose();
+      gridHelper.material.dispose();
+      gridHelper = new THREE.GridHelper(200, 20, major, minor);
+      scene.add(gridHelper);
+    }
+  }
+
+  function currentTheme(){
+    try{
+      const saved = localStorage.getItem('activationScopeTheme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    }catch(e){}
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+
+  let themeMode = currentTheme();
+  applyTheme(themeMode);
+  $("themeToggle").addEventListener("click", ()=>{
+    themeMode = (themeMode === 'dark') ? 'light' : 'dark';
+    applyTheme(themeMode);
+  });
+
 
   function computeStrides(shape, fortranOrder){
     const d = shape.length;
@@ -269,7 +358,7 @@
 
   function loadFile(file){
     if (!file.name.endsWith(".npy")){
-      alert("Please provide a .npy file (export with numpy.save()).");
+      alert("Please provide a .npy file.");
       return;
     }
     const reader = new FileReader();
@@ -314,6 +403,7 @@
     dimSliceIdx = shape.map(()=>0);
     dimCropMin = shape.map(()=>0);
     dimCropMax = shape.map((size)=>size-1);
+    dimLabels = shape.map((_,i)=>`dim ${i}`);
 
     const c = $("dimsContainer");
     c.innerHTML = "";
@@ -322,6 +412,9 @@
       wrap.className = "dimRow";
       wrap.innerHTML = `
         <div class="dimHead"><span>dim ${dimIdx}</span><b>size ${size}</b></div>
+        <div class="labelRow">
+          <input type="text" class="dimLabel" data-dim="${dimIdx}" placeholder="label, e.g. layer / head / token" maxlength="24" value="">
+        </div>
         <select data-dim="${dimIdx}" class="roleSel">
           <option value="X">→ X axis</option>
           <option value="Y">→ Y axis</option>
@@ -335,25 +428,29 @@
           <input type="range" min="0" max="${size-1}" value="0" data-dim="${dimIdx}" class="sliceRange">
           <span class="sliceVal">0</span>
         </div>
-        <div class="cropRow" style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:10px;">
+        <div class="cropRow" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:13px;">
           <span style="color:var(--text-dim);">Limit Range</span>
-          <div style="display:flex; gap:4px; align-items:center;">
-              <input type="number" class="cropMin" value="0" min="0" max="${size-1}" style="width:42px;">
+          <div style="display:flex; gap:6px; align-items:center;">
+              <input type="number" class="cropMin" value="0" min="0" max="${size-1}" style="width:55px;">
               <span style="color:var(--text-dim);">to</span>
-              <input type="number" class="cropMax" value="${size-1}" min="0" max="${size-1}" style="width:42px;">
+              <input type="number" class="cropMax" value="${size-1}" min="0" max="${size-1}" style="width:55px;">
           </div>
         </div>`;
       c.appendChild(wrap);
       
-      // Wire up Role Changes
       wrap.querySelector(".roleSel").value = dimRoles[dimIdx];
       wrap.querySelector(".roleSel").addEventListener("change", e=>{
         dimRoles[dimIdx] = e.target.value;
         wrap.querySelector(".sliceRow").classList.toggle("show", e.target.value === "slice");
         triggerLiveRender();
       });
+
+      wrap.querySelector(".dimLabel").addEventListener("input", e=>{
+        const v = e.target.value.trim();
+        dimLabels[dimIdx] = v.length ? v : `dim ${dimIdx}`;
+        triggerLiveRender();
+      });
       
-      // Wire up Live "Scrolling" (Slice Sliders)
       const sr = wrap.querySelector(".sliceRange");
       sr.addEventListener("input", e=>{
         dimSliceIdx[dimIdx] = parseInt(e.target.value,10);
@@ -361,7 +458,6 @@
         triggerLiveRender();
       });
 
-      // Wire up Limit Range Inputs
       const cMin = wrap.querySelector(".cropMin");
       const cMax = wrap.querySelector(".cropMax");
       
@@ -381,18 +477,14 @@
     });
   }
 
-  // Core trigger for fast updates without full scene reset
   function triggerLiveRender() {
       if (!raw || !pointCloud) return; 
       try {
         const vol = buildVolume();
         renderVolume(vol, parseInt($("thresh").value,10), $("colorBy").value, parseFloat($("ptSize").value));
-      } catch(err) {
-         // Silently catch layout errors (like inverted mins/maxs) during fast scrubbing
-      }
+      } catch(err) {}
   }
 
-  // ---------- REDUCTION INTO 3D VOLUME ----------
   function buildVolume(){
     const shape = raw.shape, d = raw.data;
     const dims = shape.length;
@@ -402,7 +494,6 @@
     const zDim = dimRoles.indexOf('Z');
     if (xDim<0 || yDim<0 || zDim<0) throw new Error("Assign exactly one dimension each to X, Y and Z.");
 
-    // Calculate dynamic bounding box based on user Limits
     const nx = dimCropMax[xDim] - dimCropMin[xDim] + 1;
     const ny = dimCropMax[yDim] - dimCropMin[yDim] + 1;
     const nz = dimCropMax[zDim] - dimCropMin[zDim] + 1;
@@ -425,16 +516,11 @@
       for (let dd=0; dd<dims; dd++){
         const id = Math.floor(rem / strides[dd]) % shape[dd];
         idxBuf[dd] = id;
-        
-        // Filter by user limits (cropping)
         if (id < dimCropMin[dd] || id > dimCropMax[dd]) { ok = false; break; }
-        
-        // Filter by single slice index if active
         if (dimRoles[dd] === 'slice' && id !== dimSliceIdx[dd]) { ok = false; break; }
       }
       if (!ok) continue;
 
-      // Shift physical coordinates by the cropped offset
       const ox = idxBuf[xDim] - dimCropMin[xDim];
       const oy = idxBuf[yDim] - dimCropMin[yDim];
       const oz = idxBuf[zDim] - dimCropMin[zDim];
@@ -458,17 +544,20 @@
     for (let i=0;i<volN;i++){
       if (cnt[i]===0){ out[i]=0; continue; }
       if (mode==='mean') out[i] = sum[i]/cnt[i];
-      else if (mode==='absmax'){
-        out[i] = (best[i] === -Infinity) ? 0 : best[i];
-      } else out[i] = (best[i] === -Infinity) ? 0 : best[i];
+      else if (mode==='absmax') out[i] = (best[i] === -Infinity) ? 0 : best[i];
+      else out[i] = (best[i] === -Infinity) ? 0 : best[i];
     }
     return { nx, ny, nz, values: out, mode };
   }
 
-  // ---------- COLORMAP (turbo-ish) ----------
+  // ---------- COLORMAP (Darker tones for light background) ----------
   const STOPS = [
-    [0.05,0.05,0.20],[0.10,0.25,0.45],[0.10,0.55,0.55],
-    [0.36,0.95,0.77],[1.00,0.89,0.48],[1.00,0.54,0.24],[1.00,0.24,0.24]
+    [0.70,0.75,0.85], // Neutral dim grey/blue
+    [0.29,0.48,0.69], // Blue
+    [0.17,0.62,0.55], // Teal
+    [0.11,0.62,0.28], // Green
+    [0.85,0.52,0.10], // Orange
+    [0.82,0.23,0.23]  // Red
   ];
   function colormap(t){
     t = Math.min(1, Math.max(0, t));
@@ -488,13 +577,19 @@
     if (renderer) return;
     const canvas = $("scene");
     renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+    
+    // Performance setup: Fix pixel ratio to 1 for intensive point clouds
+    renderer.setPixelRatio(1);
+    
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x070908);
+    const sceneBg = getComputedStyle(document.documentElement).getPropertyValue('--scene-bg').trim();
+    scene.background = new THREE.Color(sceneBg || '#f4f7f6');
     camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
 
-    const grid = new THREE.GridHelper(200, 20, 0x1f2b29, 0x141b19);
-    scene.add(grid);
+    const gridMajor = getComputedStyle(document.documentElement).getPropertyValue('--grid-major').trim();
+    const gridMinor = getComputedStyle(document.documentElement).getPropertyValue('--grid-minor').trim();
+    gridHelper = new THREE.GridHelper(200, 20, gridMajor || 0xd1dbd8, gridMinor || 0xe2e8e6);
+    scene.add(gridHelper);
 
     resize();
     window.addEventListener("resize", resize);
@@ -571,11 +666,22 @@
     const cutIdx = Math.floor((threshPct/100)*(n-1));
     const cutVal = sorted[Math.max(0,cutIdx)];
 
-    const positions=[], colors=[], sizes=[];
+    // OPTIMIZATION: Pre-allocate typed arrays instead of standard Array.push()
+    let renderCount = 0;
+    for (let i = 0; i < n; i++) {
+        const raw = values[i];
+        if ((colorMode === 'abs' ? Math.abs(raw) : raw) >= cutVal) renderCount++;
+    }
+
+    const positions = new Float32Array(renderCount * 3);
+    const colors = new Float32Array(renderCount * 3);
+    
     const hot = [];
     const span = Math.max(nx,ny,nz);
     const scale = 140/span;
     const cx=(nx-1)/2, cy=(ny-1)/2, cz=(nz-1)/2;
+
+    let pIdx = 0, cIdx = 0;
 
     for (let iz=0; iz<nz; iz++){
       for (let iy=0; iy<ny; iy++){
@@ -584,23 +690,33 @@
           const raw = values[idx];
           const cmpVal = colorMode==='abs'?Math.abs(raw):raw;
           if (cmpVal < cutVal) continue;
+          
           const t = (mx-mn)>1e-9 ? (cmpVal-mn)/(mx-mn) : 0.5;
           const [r,g,b] = colormap(t);
-          positions.push((ix-cx)*scale, (iy-cy)*scale, (iz-cz)*scale);
-          colors.push(r,g,b);
-          sizes.push(0.6 + t*1.6);
+          
+          positions[pIdx++] = (ix-cx)*scale;
+          positions[pIdx++] = (iy-cy)*scale;
+          positions[pIdx++] = (iz-cz)*scale;
+          
+          colors[cIdx++] = r;
+          colors[cIdx++] = g;
+          colors[cIdx++] = b;
+
           hot.push({ix,iy,iz,val:raw,t});
         }
       }
     }
 
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    // Normal Blending keeps dark colormaps rich and visible on light backgrounds
     const mat = new THREE.PointsMaterial({
-      size: ptSize, vertexColors:true, transparent:true, opacity:0.92,
-      sizeAttenuation:true, depthWrite:false, blending: THREE.AdditiveBlending
+      size: ptSize, vertexColors:true, transparent:true, opacity:0.8,
+      sizeAttenuation:true, depthWrite:false, blending: THREE.NormalBlending
     });
+    
     pointCloud = new THREE.Points(geo, mat);
     scene.add(pointCloud);
 
@@ -611,21 +727,22 @@
     renderHotlist(hot.slice(0,12), vol);
 
     $("renderInfo").textContent =
-      `${positions.length/3 > 0 ? (positions.length/3).toLocaleString() : 0} / ${n.toLocaleString()} voxels shown · reduce mode: ${vol.mode}`;
+      `${renderCount > 0 ? renderCount.toLocaleString() : 0} / ${n.toLocaleString()} voxels shown · reduce mode: ${vol.mode}`;
+    const xDimL = dimRoles.indexOf('X'), yDimL = dimRoles.indexOf('Y'), zDimL = dimRoles.indexOf('Z');
+    const axisLbl = `X:${dimLabels[xDimL]||'dim '+xDimL} Y:${dimLabels[yDimL]||'dim '+yDimL} Z:${dimLabels[zDimL]||'dim '+zDimL}`;
     $("hud").innerHTML =
-      `grid <span class="v">${nx}×${ny}×${nz}</span> &nbsp;|&nbsp; range <span class="v">${mn.toFixed(3)} … ${mx.toFixed(3)}</span>`;
+      `grid <span class="v">${nx}×${ny}×${nz}</span> &nbsp;|&nbsp; range <span class="v">${mn.toFixed(3)} … ${mx.toFixed(3)}</span><br>${axisLbl}`;
 
     flashScan();
   }
 
   function renderHotlist(hot, vol){
     const xDim = dimRoles.indexOf('X'), yDim = dimRoles.indexOf('Y'), zDim = dimRoles.indexOf('Z');
-    
-    // Reverse the crop offset so hotlist reflects absolute tensor coordinates
+    const lx = dimLabels[xDim] || `dim ${xDim}`, ly = dimLabels[yDim] || `dim ${yDim}`, lz = dimLabels[zDim] || `dim ${zDim}`;
     $("hotrows").innerHTML = hot.map((h,i)=>
       `<div class="hotrow">
         <b>#${i+1}</b>
-        <span class="idx">[d${xDim}=${h.ix + dimCropMin[xDim]}, d${yDim}=${h.iy + dimCropMin[yDim]}, d${zDim}=${h.iz + dimCropMin[zDim]}]</span>
+        <span class="idx">[${lx}=${h.ix + dimCropMin[xDim]}, ${ly}=${h.iy + dimCropMin[yDim]}, ${lz}=${h.iz + dimCropMin[zDim]}]</span>
         <span class="val">${h.val.toFixed(4)}</span>
       </div>`
     ).join("");
